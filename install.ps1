@@ -185,4 +185,4 @@ Write-Host "    Mettre a jour : docker compose pull && docker compose up -d" -Fo
 Write-Host ""
 
 $o = Read-Host "  Ouvrir dans le navigateur ? (O/n)"
-if ($o -ne "n" -and $o -ne "N") { Start-Process $url }
+if ($o -ne "n" -and $o -ne "N") { Start-Process "cmd" -ArgumentList "/c start $url" }
