@@ -162,13 +162,12 @@ if ($h -ne "healthy") {
 }
 
 # ── Résumé ─────────────────────────────────────────────────
-$envPort   = "80"
 $envOrigin = "http://localhost"
 Get-Content ".env" | ForEach-Object {
-    if ($_ -match '^FRONTEND_PORT=(.+)') { $envPort   = $Matches[1].Trim() }
-    if ($_ -match '^CORS_ORIGIN=(.+)')   { $envOrigin = $Matches[1].Trim() }
+    if ($_ -match '^CORS_ORIGIN=(.+)') { $envOrigin = $Matches[1].Trim() }
 }
-$url = if ($envPort -eq "80") { $envOrigin } else { "${envOrigin}:${envPort}" }
+# CORS_ORIGIN contient deja le port si necessaire (ex: http://localhost:9696)
+$url = $envOrigin
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
