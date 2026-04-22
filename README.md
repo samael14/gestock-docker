@@ -15,7 +15,19 @@
 
 ---
 
-## Installation
+## Installation rapide (Windows)
+
+```powershell
+git clone https://github.com/samael14/gestock-docker.git
+cd gestock-docker
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Le script vérifie Docker, génère les secrets automatiquement, configure le `.env` de manière interactive et démarre tous les conteneurs.
+
+---
+
+## Installation manuelle
 
 ### 1. Cloner ce dépôt
 
