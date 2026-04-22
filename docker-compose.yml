@@ -1,0 +1,75 @@
+# ══════════════════════════════════════════════════════════════════
+# GESTOCK — Kit de déploiement production
+# Images pré-buildées disponibles sur GitHub Container Registry (GHCR)
+# ══════════════════════════════════════════════════════════════════
+#
+# Prérequis :
+#   1. Docker + Docker Compose installés sur le serveur
+#   2. Fichier .env créé à partir de .env.example  →  cp .env.example .env
+#   3. Éditer .env avec vos propres valeurs (mots de passe, IP serveur…)
+#   4. Se connecter au registry : docker login ghcr.io
+#      (compte GitHub requis — images publiques, connexion facultative)
+#
+# Démarrage :
+#   docker compose up -d
+#
+# Mise à jour :
+#   docker compose pull && docker compose up -d
+#
+# Arrêt :
+#   docker compose down
+#
+# Suppression complète avec données :
+#   docker compose down -v
+# ══════════════════════════════════════════════════════════════════
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: gestock_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gestock_db
+      POSTGRES_USER: gestock
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis dans .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gestock -d gestock_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ghcr.io/samael14/gestock-api:latest
+    container_name: gestock_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://gestock:${DB_PASSWORD}@db:5432/gestock_db?schema=public"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis dans .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET requis dans .env}
+      JWT_ACCESS_EXPIRES: ${JWT_ACCESS_EXPIRES:-15m}
+      JWT_REFRESH_EXPIRES: ${JWT_REFRESH_EXPIRES:-7d}
+      PORT: 3001
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD requis dans .env}
+
+  frontend:
+    image: ghcr.io/samael14/gestock-frontend:latest
+    container_name: gestock_frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+
+volumes:
+  postgres_data:
+    name: gestock_postgres_data

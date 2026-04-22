@@ -1,0 +1,5 @@
+# Ne jamais committer le fichier .env contenant les mots de passe réels
+.env
+
+# Logs
+*.log
