@@ -2,7 +2,7 @@
 
 > Gestion de stock IT multi-sites · Installation en 5 minutes avec Docker Compose
 
-
+![image alt](https://github.com/samael14/gestock-docker/blob/main/2026-04-22%2019_07_34-.png)
 ---
 
 ## Prérequis
