@@ -71,11 +71,34 @@ if (-not (Test-Path ".env")) {
     $r = Read-Host "  Mot de passe admin initial [Admin@2024!]"
     $adminPwd = if ($r -eq "") { "Admin@2024!" } else { $r }
 
-    $r = Read-Host "  URL acces serveur (IP ou domaine) [http://localhost]"
-    $corsOrigin = if ($r -eq "") { "http://localhost" } else { $r }
+    $r = Read-Host "  URL acces serveur (http://IP ou https://domaine) [http://localhost]"
+    $baseUrl = if ($r -eq "") { "http://localhost" } else { $r.TrimEnd('/') }
 
     $r = Read-Host "  Port HTTP [80]"
     $port = if ($r -eq "") { "80" } else { $r }
+
+    # CORS_ORIGIN doit inclure le port si different de 80
+    $corsOrigin = if ($port -ne "80") { "${baseUrl}:${port}" } else { $baseUrl }
+
+    Write-Host ""
+    Write-Host "  SMTP (optionnel - Entree pour ignorer) :" -ForegroundColor White
+    $smtpHost = Read-Host "  Serveur SMTP (ex: smtp.office365.com)"
+    $smtpPort = "587"
+    $smtpUser = ""
+    $smtpPass = ""
+    $smtpFrom = ""
+    if ($smtpHost -ne "") {
+        $r = Read-Host "  Port SMTP [587]"
+        $smtpPort = if ($r -eq "") { "587" } else { $r }
+        $smtpUser = Read-Host "  Utilisateur SMTP"
+        $smtpPass = Read-Host "  Mot de passe SMTP"
+        $r = Read-Host "  Expediteur (ex: GESTOCK <no-reply@monentreprise.fr>) [$smtpUser]"
+        $smtpFrom = if ($r -eq "") { $smtpUser } else { $r }
+    }
+
+    Write-Host ""
+    Write-Host "  GLPI (optionnel - Entree pour ignorer) :" -ForegroundColor White
+    $glpiHost = Read-Host "  Domaine GLPI sans http:// (ex: glpi.monentreprise.fr)"
 
     $lines = @(
         "# Genere par install.ps1 le $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
@@ -88,7 +111,19 @@ if (-not (Test-Path ".env")) {
         "ADMIN_PASSWORD=$adminPwd",
         "",
         "CORS_ORIGIN=$corsOrigin",
-        "FRONTEND_PORT=$port"
+        "FRONTEND_PORT=$port",
+        "",
+        "# SMTP",
+        "SMTP_HOST=$smtpHost",
+        "SMTP_PORT=$smtpPort",
+        "SMTP_SECURE=false",
+        "SMTP_USER=$smtpUser",
+        "SMTP_PASS=$smtpPass",
+        "SMTP_FROM=$smtpFrom",
+        "SMTP_REJECT_UNAUTHORIZED=true",
+        "",
+        "# GLPI",
+        "GLPI_HOST=$glpiHost"
     )
     [System.IO.File]::WriteAllLines(".env", $lines, [System.Text.Encoding]::UTF8)
     Write-OK ".env cree"

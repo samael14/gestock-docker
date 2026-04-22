@@ -60,6 +60,14 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD requis dans .env}
+      # SMTP (optionnel — laisser vide pour desactiver les emails)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-true}
 
   frontend:
     image: ghcr.io/samael14/gestock-frontend:latest
@@ -67,6 +75,9 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    environment:
+      # URL de votre serveur GLPI (ex: glpi.monentreprise.fr) — laisser vide si pas de GLPI
+      GLPI_HOST: ${GLPI_HOST:-}
     ports:
       - "${FRONTEND_PORT:-80}:80"
 
