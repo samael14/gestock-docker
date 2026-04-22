@@ -1,221 +1,153 @@
-# ══════════════════════════════════════════════════════════════════════════════
-#  GESTOCK — Script d'installation automatique (Windows)
-#  Usage : Clic-droit → "Exécuter avec PowerShell"
-#          ou : powershell -ExecutionPolicy Bypass -File .\install.ps1
-# ══════════════════════════════════════════════════════════════════════════════
+﻿# ============================================================
+#  GESTOCK - Script d installation automatique (Windows)
+#  Usage : powershell -ExecutionPolicy Bypass -File .\install.ps1
+# ============================================================
 
 $ErrorActionPreference = 'Stop'
+Set-Location (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
-function Write-Header {
-    Write-Host ""
-    Write-Host "╔══════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║         GESTOCK — Installation               ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
+function Write-Step($n, $text) { Write-Host "[$n] $text" -ForegroundColor Yellow }
+function Write-OK($text)       { Write-Host "  OK  $text" -ForegroundColor Green }
+function Write-Err($text)      { Write-Host "  ERR $text" -ForegroundColor Red }
+
+function New-Secret {
+    $b = New-Object byte[] 32
+    [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($b)
+    return ([BitConverter]::ToString($b) -replace '-','').ToLower()
 }
 
-function Write-Step($n, $text) {
-    Write-Host "[$n] $text" -ForegroundColor Yellow
+# ── 1. Verifier Docker ──────────────────────────────────────
+Write-Step "1/5" "Verification de Docker..."
+
+$dockerCheck = docker --version 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Docker introuvable. Telechargez Docker Desktop : https://www.docker.com/products/docker-desktop"
+    Read-Host "Appuyez sur Entree pour quitter"; exit 1
 }
+Write-OK $dockerCheck
 
-function Write-OK($text) {
-    Write-Host "  ✓ $text" -ForegroundColor Green
+docker info *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Docker Desktop n est pas demarre. Lancez-le puis relancez ce script."
+    Read-Host "Appuyez sur Entree pour quitter"; exit 1
 }
+Write-OK "Docker Engine actif"
 
-function Write-Err($text) {
-    Write-Host "  ✗ $text" -ForegroundColor Red
-}
-
-function Prompt-Value($label, $default = "", $secret = $false) {
-    if ($secret) {
-        $prompt = "    → $label"
-        if ($default) { $prompt += " [laisser vide = $default]" }
-        $prompt += " : "
-        $val = Read-Host -Prompt $prompt -AsSecureString
-        $plain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($val))
-        if ($plain -eq "" -and $default -ne "") { return $default }
-        return $plain
-    } else {
-        $prompt = "    → $label"
-        if ($default) { $prompt += " [$default]" }
-        $prompt += " : "
-        $val = Read-Host -Prompt $prompt
-        if ($val -eq "" -and $default -ne "") { return $default }
-        return $val
-    }
-}
-
-function Generate-Secret {
-    $bytes = New-Object byte[] 32
-    [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($bytes)
-    return ([System.BitConverter]::ToString($bytes) -replace '-','').ToLower()
-}
-
-# ── Début ──────────────────────────────────────────────────────────────────────
-
-Write-Header
-
-# ── Étape 1 : Vérifier Docker ─────────────────────────────────────────────────
-Write-Step "1/5" "Vérification de Docker..."
-
-try {
-    $dockerVer = docker --version 2>&1
-    if ($LASTEXITCODE -ne 0) { throw }
-    Write-OK "Docker trouvé : $dockerVer"
-} catch {
-    Write-Err "Docker n'est pas installé ou n'est pas démarré."
-    Write-Host "    Téléchargez Docker Desktop : https://www.docker.com/products/docker-desktop" -ForegroundColor Gray
-    Write-Host ""
-    Read-Host "Appuyez sur Entrée pour quitter"
-    exit 1
-}
-
-try {
-    docker info *> $null
-    if ($LASTEXITCODE -ne 0) { throw }
-    Write-OK "Docker Engine actif"
-} catch {
-    Write-Err "Docker Desktop n'est pas démarré. Lancez-le puis relancez ce script."
-    Write-Host ""
-    Read-Host "Appuyez sur Entrée pour quitter"
-    exit 1
-}
-
-# ── Étape 2 : Vérifier docker-compose.yml ─────────────────────────────────────
-Write-Step "2/5" "Vérification des fichiers..."
-
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $scriptDir
+# ── 2. Verifier docker-compose.yml ─────────────────────────
+Write-Step "2/5" "Verification des fichiers..."
 
 if (-not (Test-Path "docker-compose.yml")) {
-    Write-Err "Fichier docker-compose.yml introuvable dans $scriptDir"
-    Write-Host "    Assurez-vous d'exécuter ce script depuis le dossier du kit de déploiement." -ForegroundColor Gray
-    Read-Host "Appuyez sur Entrée pour quitter"
-    exit 1
+    Write-Err "Fichier docker-compose.yml introuvable. Executez ce script depuis le dossier du kit."
+    Read-Host "Appuyez sur Entree pour quitter"; exit 1
 }
-Write-OK "docker-compose.yml trouvé"
+Write-OK "docker-compose.yml trouve"
 
-# ── Étape 3 : Configurer le fichier .env ──────────────────────────────────────
-Write-Step "3/5" "Configuration de l'environnement..."
+# ── 3. Configurer .env ─────────────────────────────────────
+Write-Step "3/5" "Configuration de l environnement..."
 
 if (Test-Path ".env") {
-    Write-Host "    Un fichier .env existe déjà." -ForegroundColor Gray
-    $overwrite = Read-Host "    → Écraser et reconfigurer ? (o/N)"
-    if ($overwrite -ne "o" -and $overwrite -ne "O") {
-        Write-OK ".env conservé tel quel"
-    } else {
+    Write-Host "  Un fichier .env existe deja." -ForegroundColor Gray
+    $ow = Read-Host "  Ecraser et reconfigurer ? (o/N)"
+    if ($ow -eq "o" -or $ow -eq "O") {
         Remove-Item ".env"
+    } else {
+        Write-OK ".env conserve"
     }
 }
 
 if (-not (Test-Path ".env")) {
     Write-Host ""
-    Write-Host "  Configuration requise (appuyez sur Entrée pour utiliser la valeur par défaut) :" -ForegroundColor White
+    Write-Host "  Renseignez les valeurs (Entree = valeur par defaut entre crochets) :" -ForegroundColor White
     Write-Host ""
 
-    # Générer des secrets automatiquement
-    $jwtSecret      = Generate-Secret
-    $jwtRefresh     = Generate-Secret
-    $dbPasswordAuto = Generate-Secret | Select-String -Pattern '^.{24}' | ForEach-Object { $_.Matches[0].Value }
+    $jwtSecret  = New-Secret
+    $jwtRefresh = New-Secret
+    $dbAuto     = (New-Secret).Substring(0, 24)
+    Write-Host "  Secrets JWT generes automatiquement." -ForegroundColor DarkGray
 
-    Write-Host "    Secrets JWT générés automatiquement ✓" -ForegroundColor DarkGray
+    $r = Read-Host "  Mot de passe base de donnees [$dbAuto]"
+    $dbPwd = if ($r -eq "") { $dbAuto } else { $r }
 
-    $dbPassword   = Prompt-Value "Mot de passe base de données" $dbPasswordAuto $true
-    $adminPwd     = Prompt-Value "Mot de passe admin initial" "Admin@2024!" $true
-    $corsOrigin   = Prompt-Value "URL d'accès (IP ou domaine du serveur)" "http://localhost"
-    $frontendPort = Prompt-Value "Port HTTP" "80"
+    $r = Read-Host "  Mot de passe admin initial [Admin@2024!]"
+    $adminPwd = if ($r -eq "") { "Admin@2024!" } else { $r }
 
-    $envContent = @"
-# Généré automatiquement par install.ps1 le $(Get-Date -Format 'yyyy-MM-dd HH:mm')
+    $r = Read-Host "  URL acces serveur (IP ou domaine) [http://localhost]"
+    $corsOrigin = if ($r -eq "") { "http://localhost" } else { $r }
 
-DB_PASSWORD=$dbPassword
+    $r = Read-Host "  Port HTTP [80]"
+    $port = if ($r -eq "") { "80" } else { $r }
 
-JWT_SECRET=$jwtSecret
-JWT_REFRESH_SECRET=$jwtRefresh
-
-ADMIN_PASSWORD=$adminPwd
-
-CORS_ORIGIN=$corsOrigin
-FRONTEND_PORT=$frontendPort
-"@
-
-    [System.IO.File]::WriteAllText("$scriptDir\.env", $envContent, [System.Text.Encoding]::UTF8)
-    Write-OK ".env créé"
+    $lines = @(
+        "# Genere par install.ps1 le $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
+        "",
+        "DB_PASSWORD=$dbPwd",
+        "",
+        "JWT_SECRET=$jwtSecret",
+        "JWT_REFRESH_SECRET=$jwtRefresh",
+        "",
+        "ADMIN_PASSWORD=$adminPwd",
+        "",
+        "CORS_ORIGIN=$corsOrigin",
+        "FRONTEND_PORT=$port"
+    )
+    [System.IO.File]::WriteAllLines(".env", $lines, [System.Text.Encoding]::UTF8)
+    Write-OK ".env cree"
 }
 
-# ── Étape 4 : Télécharger les images ─────────────────────────────────────────
-Write-Step "4/5" "Téléchargement des images Docker (peut prendre quelques minutes)..."
+# ── 4. Pull images ─────────────────────────────────────────
+Write-Step "4/5" "Telechargement des images Docker..."
 
 docker compose pull
 if ($LASTEXITCODE -ne 0) {
-    Write-Err "Erreur lors du téléchargement des images."
-    Write-Host "    Vérifiez votre connexion internet." -ForegroundColor Gray
-    Read-Host "Appuyez sur Entrée pour quitter"
-    exit 1
+    Write-Err "Erreur lors du telechargement des images. Verifiez votre connexion."
+    Read-Host "Appuyez sur Entree pour quitter"; exit 1
 }
-Write-OK "Images téléchargées"
+Write-OK "Images telechargees"
 
-# ── Étape 5 : Démarrer les conteneurs ────────────────────────────────────────
-Write-Step "5/5" "Démarrage de GESTOCK..."
+# ── 5. Demarrer ────────────────────────────────────────────
+Write-Step "5/5" "Demarrage de GESTOCK..."
 
 docker compose up -d
 if ($LASTEXITCODE -ne 0) {
-    Write-Err "Erreur lors du démarrage des conteneurs."
-    Write-Host "    Consultez les logs : docker compose logs" -ForegroundColor Gray
-    Read-Host "Appuyez sur Entrée pour quitter"
-    exit 1
+    Write-Err "Erreur au demarrage. Consultez : docker compose logs"
+    Read-Host "Appuyez sur Entree pour quitter"; exit 1
 }
 
-# ── Attendre que l'API soit prête ─────────────────────────────────────────────
-Write-Host ""
-Write-Host "  Attente du démarrage de la base de données..." -ForegroundColor Gray
-
-$maxWait = 30
-$waited  = 0
+Write-Host "  Attente base de donnees..." -ForegroundColor Gray
+$waited = 0
 do {
-    Start-Sleep -Seconds 2
-    $waited += 2
-    $health = docker inspect --format='{{.State.Health.Status}}' gestock_db 2>$null
-} while ($health -ne "healthy" -and $waited -lt $maxWait)
+    Start-Sleep -Seconds 2; $waited += 2
+    $h = docker inspect --format="{{.State.Health.Status}}" gestock_db 2>$null
+} while ($h -ne "healthy" -and $waited -lt 60)
 
-if ($health -ne "healthy") {
-    Write-Host "  ⚠ La base de données tarde à démarrer. Vérifiez avec : docker compose logs db" -ForegroundColor Yellow
+if ($h -ne "healthy") {
+    Write-Host "  La base de donnees tarde a demarrer. Verifiez : docker compose logs db" -ForegroundColor Yellow
 } else {
-    Write-OK "Base de données prête"
+    Write-OK "Base de donnees prete"
 }
 
-# ── Résumé ────────────────────────────────────────────────────────────────────
-Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║  GESTOCK est démarré !                                   ║" -ForegroundColor Green
-Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Green
-Write-Host ""
-
-# Lire le port depuis .env
-$port = "80"
+# ── Résumé ─────────────────────────────────────────────────
+$envPort   = "80"
+$envOrigin = "http://localhost"
 Get-Content ".env" | ForEach-Object {
-    if ($_ -match '^FRONTEND_PORT=(.+)$') { $port = $Matches[1].Trim() }
+    if ($_ -match '^FRONTEND_PORT=(.+)') { $envPort   = $Matches[1].Trim() }
+    if ($_ -match '^CORS_ORIGIN=(.+)')   { $envOrigin = $Matches[1].Trim() }
 }
-$corsVal = "http://localhost"
-Get-Content ".env" | ForEach-Object {
-    if ($_ -match '^CORS_ORIGIN=(.+)$') { $corsVal = $Matches[1].Trim() }
-}
-$url = if ($port -eq "80") { $corsVal } else { "${corsVal}:${port}" }
+$url = if ($envPort -eq "80") { $envOrigin } else { "${envOrigin}:${envPort}" }
 
-Write-Host "  Accès         : $url" -ForegroundColor Cyan
-Write-Host "  Identifiant   : admin" -ForegroundColor Cyan
-Write-Host "  Mot de passe  : (valeur ADMIN_PASSWORD dans .env)" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Green
+Write-Host "  GESTOCK est demarre !" -ForegroundColor Green
+Write-Host "============================================" -ForegroundColor Green
+Write-Host "  Acces       : $url" -ForegroundColor Cyan
+Write-Host "  Identifiant : admin" -ForegroundColor Cyan
+Write-Host "  Mot de passe: (valeur ADMIN_PASSWORD dans .env)" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Commandes utiles :" -ForegroundColor Gray
 Write-Host "    Logs          : docker compose logs -f" -ForegroundColor Gray
-Write-Host "    Arrêter       : docker compose down" -ForegroundColor Gray
-Write-Host "    Mettre à jour : docker compose pull && docker compose up -d" -ForegroundColor Gray
+Write-Host "    Arreter       : docker compose down" -ForegroundColor Gray
+Write-Host "    Mettre a jour : docker compose pull && docker compose up -d" -ForegroundColor Gray
 Write-Host ""
 
-$open = Read-Host "  Ouvrir dans le navigateur ? (O/n)"
-if ($open -ne "n" -and $open -ne "N") {
-    Start-Process $url
-}
-
-Write-Host ""
+$o = Read-Host "  Ouvrir dans le navigateur ? (O/n)"
+if ($o -ne "n" -and $o -ne "N") { Start-Process $url }
