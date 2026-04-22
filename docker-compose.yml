@@ -77,7 +77,7 @@ services:
       - api
     environment:
       # URL de votre serveur GLPI (ex: glpi.monentreprise.fr) — laisser vide si pas de GLPI
-      GLPI_HOST: ${GLPI_HOST:-}
+      GLPI_HOST: ${GLPI_HOST:-disabled.local}
     ports:
       - "${FRONTEND_PORT:-80}:80"
 
