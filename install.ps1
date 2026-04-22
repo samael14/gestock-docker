@@ -142,7 +142,17 @@ Write-OK "Images telechargees"
 # ── 5. Demarrer ────────────────────────────────────────────
 Write-Step "5/5" "Demarrage de GESTOCK..."
 
-docker compose up -d
+# Stopper et supprimer les anciens containers gestock (toute origine)
+foreach ($ctr in @("gestock_frontend","gestock_api","gestock_db")) {
+    $exists = docker ps -a --format "{{.Names}}" 2>$null | Select-String "^$ctr$"
+    if ($exists) {
+        docker stop $ctr 2>$null | Out-Null
+        docker rm   $ctr 2>$null | Out-Null
+        Write-Host "  Ancien container $ctr supprime" -ForegroundColor DarkGray
+    }
+}
+
+docker compose up -d --force-recreate
 if ($LASTEXITCODE -ne 0) {
     Write-Err "Erreur au demarrage. Consultez : docker compose logs"
     Read-Host "Appuyez sur Entree pour quitter"; exit 1
