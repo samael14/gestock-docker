@@ -3,7 +3,7 @@
 #  Usage : powershell -ExecutionPolicy Bypass -File .\install.ps1
 # ============================================================
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 Set-Location (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 function Write-Step($n, $text) { Write-Host "[$n] $text" -ForegroundColor Yellow }
@@ -26,7 +26,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-OK $dockerCheck
 
-docker info *> $null
+$null = docker info 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Err "Docker Desktop n est pas demarre. Lancez-le puis relancez ce script."
     Read-Host "Appuyez sur Entree pour quitter"; exit 1
