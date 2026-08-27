@@ -9,12 +9,13 @@
 #   3. Éditer .env avec vos propres valeurs (mots de passe, IP serveur…)
 #   4. Se connecter au registry : docker login ghcr.io
 #      (compte GitHub requis — images publiques, connexion facultative)
+#   5. Définir GESTOCK_IMAGE_TAG dans .env (tag commit recommandé)
 #
 # Démarrage :
 #   docker compose up -d
 #
 # Mise à jour :
-#   docker compose pull && docker compose up -d
+#   docker compose pull && docker compose up -d --force-recreate
 #
 # Arrêt :
 #   docker compose down
@@ -42,7 +43,8 @@ services:
       retries: 5
 
   api:
-    image: ghcr.io/samael14/gestock-api:latest
+    image: ghcr.io/samael14/gestock-api:${GESTOCK_IMAGE_TAG:?GESTOCK_IMAGE_TAG requis dans .env}
+    pull_policy: always
     container_name: gestock_api
     restart: unless-stopped
     depends_on:
@@ -70,7 +72,8 @@ services:
       SMTP_REJECT_UNAUTHORIZED: ${SMTP_REJECT_UNAUTHORIZED:-true}
 
   frontend:
-    image: ghcr.io/samael14/gestock-frontend:latest
+    image: ghcr.io/samael14/gestock-frontend:${GESTOCK_IMAGE_TAG:?GESTOCK_IMAGE_TAG requis dans .env}
+    pull_policy: always
     container_name: gestock_frontend
     restart: unless-stopped
     depends_on:

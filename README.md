@@ -48,6 +48,7 @@ Remplissez obligatoirement :
 
 | Variable | Description |
 |---|---|
+| `GESTOCK_IMAGE_TAG` | Tag d'image GHCR a deployer (hash commit recommande, ex : `fc2d694`) |
 | `DB_PASSWORD` | Mot de passe PostgreSQL — choisissez une valeur forte |
 | `JWT_SECRET` | Secret JWT (min. 32 caractères) — `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | Secret refresh JWT (min. 32 caractères) |
@@ -75,7 +76,8 @@ docker login ghcr.io -u VOTRE_PSEUDO_GITHUB
 ### 4. Démarrer GESTOCK
 
 ```bash
-docker compose up -d
+docker compose pull
+docker compose up -d --force-recreate
 ```
 
 Docker télécharge automatiquement les images (~300 Mo) et démarre 3 conteneurs :
@@ -101,8 +103,8 @@ Connexion initiale :
 ## Mise à jour
 
 ```bash
-docker compose pull          # Télécharge les nouvelles images
-docker compose up -d         # Redémarre avec les nouvelles images
+docker compose pull                        # Télécharge les images du tag GESTOCK_IMAGE_TAG
+docker compose up -d --force-recreate      # Force le redéploiement de ce même tag
 ```
 
 Les données PostgreSQL sont conservées dans le volume `gestock_postgres_data`.
@@ -195,8 +197,8 @@ server {
 
 | Image | Registre |
 |---|---|
-| `ghcr.io/samael14/gestock-frontend:latest` | GitHub Container Registry |
-| `ghcr.io/samael14/gestock-api:latest` | GitHub Container Registry |
+| `ghcr.io/samael14/gestock-frontend:${GESTOCK_IMAGE_TAG}` | GitHub Container Registry |
+| `ghcr.io/samael14/gestock-api:${GESTOCK_IMAGE_TAG}` | GitHub Container Registry |
 
 ---
 
