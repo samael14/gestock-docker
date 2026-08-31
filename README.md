@@ -24,7 +24,7 @@ cd gestock-docker
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Le script vérifie Docker, génère les secrets automatiquement, configure le `.env` de manière interactive et démarre tous les conteneurs.
+Le script vérifie Docker, propose le tag applicatif validé `607a148`, génère les secrets automatiquement, configure le `.env` de manière interactive et démarre tous les conteneurs.
 
 ---
 
@@ -48,7 +48,7 @@ Remplissez obligatoirement :
 
 | Variable | Description |
 |---|---|
-| `GESTOCK_IMAGE_TAG` | Tag d'image GHCR a deployer (hash commit recommande, ex : `fc2d694`) |
+| `GESTOCK_IMAGE_TAG` | Tag d'image GHCR à déployer (image validée : `607a148`) |
 | `DB_PASSWORD` | Mot de passe PostgreSQL — choisissez une valeur forte |
 | `JWT_SECRET` | Secret JWT (min. 32 caractères) — `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | Secret refresh JWT (min. 32 caractères) |
@@ -96,18 +96,23 @@ Connexion initiale :
 - **Identifiant** : `admin`
 - **Mot de passe** : valeur de `ADMIN_PASSWORD` dans votre `.env`
 
-> L'application démarre sans aucune donnée. Commencez par créer vos sites via **Paramètres → Sites**.
+Le bootstrap crée de façon idempotente le site, l'emplacement et le compte administrateur initiaux lorsqu'ils sont absents. Un compte admin existant conserve son mot de passe lors des redémarrages.
 
 ---
 
 ## Mise à jour
 
 ```bash
+# Sauvegarde préalable vérifiable
+mkdir -p backups
+docker exec gestock_db pg_dump -U gestock -Fc gestock_db > backups/gestock_avant_mise_a_jour.dump
+
+# Fixer le nouveau hash d'image dans .env, puis déployer
 docker compose pull                        # Télécharge les images du tag GESTOCK_IMAGE_TAG
 docker compose up -d --force-recreate      # Force le redéploiement de ce même tag
 ```
 
-Les données PostgreSQL sont conservées dans le volume `gestock_postgres_data`.
+Les données PostgreSQL sont conservées dans le volume `gestock_postgres_data`. Vérifiez que le dump est non vide avant la mise à jour.
 
 ---
 
@@ -135,12 +140,14 @@ docker compose down -v
 
 ## Sauvegarde de la base de données
 
+Les administrateurs disposent également dans l'application d'un export JSON nettoyé, d'un dump PostgreSQL natif et de snapshots logiques partagés soumis à rétention.
+
 ```bash
-# Dump PostgreSQL
-docker exec gestock_db pg_dump -U gestock gestock_db > backup_$(date +%Y%m%d).sql
+# Dump PostgreSQL au format custom
+docker exec gestock_db pg_dump -U gestock -Fc gestock_db > backup_$(date +%Y%m%d).dump
 
 # Restauration
-docker exec -i gestock_db psql -U gestock gestock_db < backup_20240101.sql
+docker exec -i gestock_db pg_restore -U gestock -d gestock_db --clean --if-exists < backup_20260831.dump
 ```
 
 ---

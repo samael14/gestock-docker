@@ -65,6 +65,9 @@ if (-not (Test-Path ".env")) {
     $dbAuto     = (New-Secret).Substring(0, 24)
     Write-Host "  Secrets JWT generes automatiquement." -ForegroundColor DarkGray
 
+    $r = Read-Host "  Tag image GESTOCK [607a148]"
+    $imageTag = if ($r -eq "") { "607a148" } else { $r }
+
     $r = Read-Host "  Mot de passe base de donnees [$dbAuto]"
     $dbPwd = if ($r -eq "") { $dbAuto } else { $r }
 
@@ -103,12 +106,16 @@ if (-not (Test-Path ".env")) {
     $lines = @(
         "# Genere par install.ps1 le $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
         "",
+        "GESTOCK_IMAGE_TAG=$imageTag",
+        "",
         "DB_PASSWORD=$dbPwd",
         "",
         "JWT_SECRET=$jwtSecret",
         "JWT_REFRESH_SECRET=$jwtRefresh",
         "",
         "ADMIN_PASSWORD=$adminPwd",
+        "RUN_SEED_ON_STARTUP=true",
+        "BACKUP_SNAPSHOT_RETENTION=20",
         "",
         "CORS_ORIGIN=$corsOrigin",
         "FRONTEND_PORT=$port",
