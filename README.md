@@ -24,7 +24,7 @@ cd gestock-docker
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Le script vérifie Docker, propose le tag applicatif validé `f22e7bf`, génère les secrets automatiquement, configure le `.env` de manière interactive et démarre tous les conteneurs.
+Le script vérifie Docker, propose le tag applicatif validé `fd73b10`, génère les secrets automatiquement, configure le `.env` de manière interactive et démarre tous les conteneurs.
 
 ---
 
@@ -48,7 +48,7 @@ Remplissez obligatoirement :
 
 | Variable | Description |
 |---|---|
-| `GESTOCK_IMAGE_TAG` | Tag d'image GHCR à déployer (image validée : `f22e7bf`) |
+| `GESTOCK_IMAGE_TAG` | Tag d'image GHCR à déployer (image validée : `fd73b10`) |
 | `DB_PASSWORD` | Mot de passe PostgreSQL — choisissez une valeur forte |
 | `JWT_SECRET` | Secret JWT (min. 32 caractères) — `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | Secret refresh JWT (min. 32 caractères) |
