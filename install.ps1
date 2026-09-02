@@ -65,8 +65,8 @@ if (-not (Test-Path ".env")) {
     $dbAuto     = (New-Secret).Substring(0, 24)
     Write-Host "  Secrets JWT generes automatiquement." -ForegroundColor DarkGray
 
-    $r = Read-Host "  Tag image GESTOCK [30f09dd]"
-    $imageTag = if ($r -eq "") { "30f09dd" } else { $r }
+    $r = Read-Host "  Tag image GESTOCK [fec26bc]"
+    $imageTag = if ($r -eq "") { "fec26bc" } else { $r }
 
     $r = Read-Host "  Mot de passe base de donnees [$dbAuto]"
     $dbPwd = if ($r -eq "") { $dbAuto } else { $r }
